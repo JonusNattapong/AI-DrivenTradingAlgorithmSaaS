@@ -1,1 +1,32 @@
- 
+[package]
+name = "ai-trading-api"
+version = "0.1.0"
+edition = "2021"
+authors = ["AI Trading Team"]
+description = "AI-Driven Trading Algorithm API"
+
+[dependencies]
+actix-web = "4.3.1"
+actix-cors = "0.6.4"
+actix-rt = "2.8.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "1.0"
+env_logger = "0.10.0"
+log = "0.4"
+chrono = { version = "0.4", features = ["serde"] }
+pyo3 = { version = "0.19.0", features = ["auto-initialize"] }
+tokio = { version = "1", features = ["full"] }
+jsonwebtoken = "8.3.0"
+dotenv = "0.15.0"
+futures = "0.3"
+config = "0.13.3"
+once_cell = "1.18.0"
+rand = "0.8.5"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
