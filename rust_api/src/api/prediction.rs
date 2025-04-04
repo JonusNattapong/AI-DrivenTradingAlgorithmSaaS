@@ -121,11 +121,13 @@ pub async fn predict(
         }
         Err(err) => {
             match err {
-                PredictionError::InvalidSymbol => HttpResponse::BadRequest().json("Invalid symbol"),
-                PredictionError::DataFetchError => HttpResponse::InternalServerError().json("Failed to fetch data"),
                 PredictionError::ModelError => HttpResponse::InternalServerError().json("Model error"),
-                PredictionError::InvalidModelType => HttpResponse::BadRequest().json("Invalid model type"),
-                PredictionError::Other(msg) => HttpResponse::InternalServerError().json(msg),
+                PredictionError::Other(msg) => {
+                    // Log the specific error message for debugging
+                    log::error!("Prediction failed: {}", msg);
+                    // Return a generic error message to the client
+                    HttpResponse::InternalServerError().json(format!("Prediction failed: {}", msg))
+                }
             }
         }
     }

@@ -1,7 +1,7 @@
 //! Python model interface for the trading algorithm service
 
 use pyo3::prelude::*;
-use pyo3::types::{PyDict, PyList, PyModule};
+use pyo3::types::{PyList, PyModule};
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
@@ -11,24 +11,14 @@ use crate::config::Config;
 
 #[derive(Error, Debug)]
 pub enum PredictionError {
-    #[error("Invalid symbol")]
-    InvalidSymbol,
-    
-    #[error("Failed to fetch data")]
-    DataFetchError,
-    
     #[error("Model error")]
     ModelError,
-    
-    #[error("Invalid model type")]
-    InvalidModelType,
     
     #[error("{0}")]
     Other(String),
 }
 
 pub struct ModelManager {
-    config: Arc<Config>,
     py_runtime: PyObject,
 }
 
@@ -40,12 +30,16 @@ impl ModelManager {
         let result = Python::with_gil(|py| -> Result<PyObject, PredictionError> {
             // Import required Python modules
             let sys = PyModule::import(py, "sys")?;
-            let os = PyModule::import(py, "os")?;
             
-            // Add model path to Python path
-            let model_path = Path::new(&config.python.model_path).canonicalize()
-                .map_err(|e| PredictionError::Other(format!("Failed to canonicalize model path: {}", e)))?;
-            
+            // Construct the absolute path to the python_model directory
+            // Assuming the executable runs from the 'rust_api' directory
+            let project_root = Path::new(".."); 
+            let model_path_buf = project_root.join(&config.python.model_path);
+            let model_path = model_path_buf.canonicalize()
+                .map_err(|e| PredictionError::Other(format!("Failed to canonicalize model path '{}': {}", model_path_buf.display(), e)))?;
+
+            log::info!("Adding Python model path to sys.path: {}", model_path.display());
+
             let py_path = sys.getattr("path")?
                 .downcast::<PyList>()
                 .map_err(|_| PredictionError::Other("Failed to get Python path".to_string()))?;
@@ -180,7 +174,6 @@ class ModelRuntime:
         
         match result {
             Ok(py_runtime) => Ok(ModelManager {
-                config,
                 py_runtime,
             }),
             Err(e) => Err(PredictionError::Other(format!("Failed to initialize Python runtime: {:?}", e))),

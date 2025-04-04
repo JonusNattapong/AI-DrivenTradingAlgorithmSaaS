@@ -26,20 +26,22 @@ pub struct PythonConfig {
 }
 
 #[derive(Clone, Debug, Deserialize)]
-pub struct SecurityConfig {
-    pub jwt_secret: String,
-    pub token_expiration: u64, // in seconds
-}
-
-#[derive(Clone, Debug, Deserialize)]
 pub struct Config {
     pub server: ServerConfig,
     pub python: PythonConfig,
-    pub security: SecurityConfig,
 }
+
+use std::path::Path;
 
 impl Config {
     pub fn from_env() -> Result<Self, ConfigError> {
+        // Load .env file from the parent directory (project root)
+        let env_path = Path::new("..").join(".env");
+        match dotenv::from_path(env_path.as_path()) {
+            Ok(_) => log::info!("Loaded .env file from: {}", env_path.display()),
+            Err(e) => log::warn!("Could not load .env file from {}: {}", env_path.display(), e),
+        };
+
         // Server configuration
         let host = env::var("SERVER_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
         let port = env::var("SERVER_PORT")
@@ -53,18 +55,9 @@ impl Config {
         let data_cache_path = env::var("PYTHON_DATA_CACHE_PATH")
             .unwrap_or_else(|_| "./python_model/data/cache".to_string());
 
-        // Security configuration
-        let jwt_secret = env::var("JWT_SECRET")
-            .map_err(|_| ConfigError::EnvVarNotFound("JWT_SECRET".to_string()))?;
-        let token_expiration = env::var("TOKEN_EXPIRATION")
-            .unwrap_or_else(|_| "86400".to_string()) // Default: 24 hours
-            .parse::<u64>()
-            .map_err(|e| ConfigError::ParseError(format!("Failed to parse TOKEN_EXPIRATION: {}", e)))?;
-
         Ok(Config {
             server: ServerConfig { host, port },
             python: PythonConfig { model_path, data_cache_path },
-            security: SecurityConfig { jwt_secret, token_expiration },
         })
     }
 }
